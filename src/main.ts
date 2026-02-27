@@ -21,6 +21,17 @@ const accounts = Flag.keyValuePair("accounts").pipe(
   ),
 )
 
+const syncDays = Flag.integer("sync-days").pipe(
+  Flag.withDescription("Number of days to sync (default: 30)"),
+  Flag.withDefault(30),
+)
+
+const syncPeriod = Flag.keyValuePair("accounts").pipe(
+  Flag.withDescription(
+    "Accounts to sync, in the format 'actual-account-id=bank-account-id'",
+  ),
+)
+
 const categorize = Flag.boolean("categorize").pipe(
   Flag.withAlias("c"),
   Flag.withDescription(
@@ -50,8 +61,9 @@ const actualsync = Command.make("actualsync", {
   categorize,
   categories,
   timezone,
+  syncDays,
 }).pipe(
-  Command.withHandler(({ accounts, categorize, categories, bank }) =>
+  Command.withHandler(({ accounts, categorize, categories, bank, syncDays }) =>
     Sync.run({
       accounts: Object.entries(accounts).map(
         ([actualAccountId, bankAccountId]) => ({
@@ -70,6 +82,7 @@ const actualsync = Command.make("actualsync", {
           ),
         ),
       ),
+      syncDays,
     }).pipe(Effect.provide(Layer.mergeAll(banks[bank], Actual.layer))),
   ),
   Command.provide(({ timezone }) => timezone),

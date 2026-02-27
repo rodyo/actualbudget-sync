@@ -77,14 +77,16 @@ export class Akahu extends ServiceMap.Service<Akahu>()("Bank/Akahu", {
 
     const accountTransactions = Effect.fnUntraced(function* (
       accountId: typeof AccountId.Type,
+      options?: { syncDays?: number },
     ) {
       const now = yield* DateTime.now
-      const lastMonth = now.pipe(DateTime.subtract({ days: 30 }))
+      const days = options?.syncDays ?? 30
+      const since = now.pipe(DateTime.subtract({ days }))
       return stream((cursor) =>
         client.transactions.pending({
           params: { accountId },
           query: {
-            start: lastMonth,
+            start: since,
             amount_as_number: "true",
             cursor,
           },
@@ -95,7 +97,7 @@ export class Akahu extends ServiceMap.Service<Akahu>()("Bank/Akahu", {
             client.transactions.list({
               params: { accountId },
               query: {
-                start: lastMonth,
+                start: since,
                 cursor,
               },
             }),
@@ -144,9 +146,9 @@ export const AkahuLayer = Effect.gen(function* () {
   )
 
   return Bank.of({
-    exportAccount: (accountId: string) =>
+    exportAccount: (accountId: string, options?: { syncDays?: number }) =>
       pipe(
-        akahu.transactions(AccountId.makeUnsafe(accountId)),
+        akahu.transactions(AccountId.makeUnsafe(accountId), options),
         Stream.runCollect,
         Effect.map(Array.map((t) => t.accountTransaction(timeZone))),
         Effect.mapError(

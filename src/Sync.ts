@@ -32,6 +32,7 @@ export const runCollect = Effect.fnUntraced(function* (options: {
     readonly name: string
     readonly transfer_acct?: string
   }>
+  readonly syncDays?: number
 }) {
   const bank = yield* Bank
   const importId = makeImportId()
@@ -58,7 +59,9 @@ export const runCollect = Effect.fnUntraced(function* (options: {
   return yield* Effect.forEach(
     options.accounts,
     Effect.fnUntraced(function* ({ bankAccountId, actualAccountId }) {
-      const transactions = yield* bank.exportAccount(bankAccountId)
+      const transactions = yield* bank.exportAccount(bankAccountId, {
+        syncDays: options.syncDays,
+      })
       const ids: Array<string> = []
       const forImport = pipe(
         transactions,
@@ -104,6 +107,7 @@ export const run = Effect.fnUntraced(function* (options: {
     readonly bankCategory: string
     readonly actualCategory: string
   }>
+  readonly syncDays?: number
 }) {
   const actual = yield* Actual
   const categories = yield* actual.use(

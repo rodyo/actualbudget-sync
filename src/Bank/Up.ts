@@ -65,15 +65,19 @@ export const UpBankLive = Effect.gen(function* () {
 
   const transactions = stream(Transaction)
 
-  const accountTransactions = Effect.fnUntraced(function* (accountId: string) {
+  const accountTransactions = Effect.fnUntraced(function* (
+    accountId: string,
+    options?: { syncDays?: number },
+  ) {
     const now = yield* DateTime.now
-    const lastMonth = now.pipe(DateTime.subtract({ days: 30 }))
-    const last30Days = yield* transactions(
+    const days = options?.syncDays ?? 30
+    const since = now.pipe(DateTime.subtract({ days }))
+    const txs = yield* transactions(
       HttpClientRequest.get(`${baseUrl}/accounts/${accountId}/transactions`, {
-        urlParams: { "filter[since]": DateTime.formatIso(lastMonth) },
+        urlParams: { "filter[since]": DateTime.formatIso(since) },
       }),
     ).pipe(Stream.runCollect)
-    return last30Days.map((t) => t.accountTransaction())
+    return txs.map((t) => t.accountTransaction())
   })
 
   return Bank.of({
