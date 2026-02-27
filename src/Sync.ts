@@ -1,7 +1,15 @@
 /**
  * @since 1.0.0
  */
-import { Array, BigDecimal, DateTime, Effect, Fiber, pipe } from "effect"
+import {
+  Array,
+  BigDecimal,
+  DateTime,
+  Duration,
+  Effect,
+  Fiber,
+  pipe,
+} from "effect"
 import { AccountTransaction, AccountTransactionOrder, Bank } from "./Bank.ts"
 import { Actual, ActualError } from "./Actual.ts"
 import {
@@ -32,7 +40,7 @@ export const runCollect = Effect.fnUntraced(function* (options: {
     readonly name: string
     readonly transfer_acct?: string
   }>
-  readonly syncDays?: number
+  readonly syncDuration: Duration.Duration
 }) {
   const bank = yield* Bank
   const importId = makeImportId()
@@ -56,11 +64,14 @@ export const runCollect = Effect.fnUntraced(function* (options: {
       ?.id
   }
 
+  const now = yield* DateTime.now
+  const since = DateTime.subtractDuration(now, options.syncDuration)
+
   return yield* Effect.forEach(
     options.accounts,
     Effect.fnUntraced(function* ({ bankAccountId, actualAccountId }) {
       const transactions = yield* bank.exportAccount(bankAccountId, {
-        syncDays: options.syncDays,
+        since,
       })
       const ids: Array<string> = []
       const forImport = pipe(
@@ -107,7 +118,7 @@ export const run = Effect.fnUntraced(function* (options: {
     readonly bankCategory: string
     readonly actualCategory: string
   }>
-  readonly syncDays?: number
+  readonly syncDuration: Duration.Duration
 }) {
   const actual = yield* Actual
   const categories = yield* actual.use(
@@ -221,6 +232,7 @@ export const runTest = Effect.fnUntraced(function* (options: {
     ],
     categories: testCategories,
     payees: testPayees,
+    syncDuration: Duration.days(30),
   })
   return results.flatMap((account) =>
     account.transactions.map((transaction) => ({
