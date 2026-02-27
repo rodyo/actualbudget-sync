@@ -1,5 +1,13 @@
 import { Command, Flag } from "effect/unstable/cli"
-import { Config, DateTime, Effect, Layer, Option, Struct } from "effect"
+import {
+  Config,
+  DateTime,
+  Duration,
+  Effect,
+  Layer,
+  Option,
+  Struct,
+} from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import * as Sync from "./Sync.ts"
 import { Actual } from "./Actual.ts"
@@ -19,6 +27,12 @@ const accounts = Flag.keyValuePair("accounts").pipe(
   Flag.withDescription(
     "Accounts to sync, in the format 'actual-account-id=bank-account-id'",
   ),
+)
+
+const syncDuration = Flag.integer("sync-days").pipe(
+  Flag.withDescription("Number of days to sync (default: 30)"),
+  Flag.withDefault(30),
+  Flag.map(Duration.days),
 )
 
 const categorize = Flag.boolean("categorize").pipe(
@@ -50,27 +64,30 @@ const actualsync = Command.make("actualsync", {
   categorize,
   categories,
   timezone,
+  syncDuration,
 }).pipe(
-  Command.withHandler(({ accounts, categorize, categories, bank }) =>
-    Sync.run({
-      accounts: Object.entries(accounts).map(
-        ([actualAccountId, bankAccountId]) => ({
-          actualAccountId,
-          bankAccountId,
-        }),
-      ),
-      categorize,
-      categoryMapping: Option.getOrUndefined(
-        Option.map(categories, (categoriesOption) =>
-          Object.entries(categoriesOption).map(
-            ([bankCategory, actualCategory]) => ({
-              bankCategory,
-              actualCategory,
-            }),
+  Command.withHandler(
+    ({ accounts, categorize, categories, bank, syncDuration }) =>
+      Sync.run({
+        accounts: Object.entries(accounts).map(
+          ([actualAccountId, bankAccountId]) => ({
+            actualAccountId,
+            bankAccountId,
+          }),
+        ),
+        categorize,
+        categoryMapping: Option.getOrUndefined(
+          Option.map(categories, (categoriesOption) =>
+            Object.entries(categoriesOption).map(
+              ([bankCategory, actualCategory]) => ({
+                bankCategory,
+                actualCategory,
+              }),
+            ),
           ),
         ),
-      ),
-    }).pipe(Effect.provide(Layer.mergeAll(banks[bank], Actual.layer))),
+        syncDuration,
+      }).pipe(Effect.provide(Layer.mergeAll(banks[bank], Actual.layer))),
   ),
   Command.provide(({ timezone }) => timezone),
 )

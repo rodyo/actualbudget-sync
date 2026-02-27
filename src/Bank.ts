@@ -14,6 +14,9 @@ export class Bank extends ServiceMap.Service<
   {
     readonly exportAccount: (
       accountId: string,
+      options: {
+        readonly since: DateTime.Utc
+      },
     ) => Effect.Effect<ReadonlyArray<AccountTransaction>, BankError>
   }
 >()("Bank") {}
