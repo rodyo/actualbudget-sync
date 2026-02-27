@@ -26,12 +26,6 @@ const syncDays = Flag.integer("sync-days").pipe(
   Flag.withDefault(30),
 )
 
-const syncPeriod = Flag.keyValuePair("accounts").pipe(
-  Flag.withDescription(
-    "Accounts to sync, in the format 'actual-account-id=bank-account-id'",
-  ),
-)
-
 const categorize = Flag.boolean("categorize").pipe(
   Flag.withAlias("c"),
   Flag.withDescription(
